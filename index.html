@@ -14,6 +14,9 @@ input { width: calc(100% - 20px); padding:10px; border:1px solid #ddd; border-ra
 button { width:100%; padding:12px; background:#1976d2; color:white; border:none; border-radius:8px; font-size:15px; cursor:pointer; margin-top:6px; }
 button:hover { background:#125aa0; }
 .updated { background:#d1ffd8 !important; transition: background 0.5s; }
+.status { font-size:12px; margin-top:5px; }
+.pending { color:#e65100; }
+.synced { color:#2e7d32; }
 </style>
 </head>
 <body>
@@ -22,147 +25,216 @@ button:hover { background:#125aa0; }
 
   <div class="card">
       <h2>Search Account</h2>
-      <div><label for="acc">Serial</label><input id="acc" placeholder="Enter Serial 400-600"></div>
+      <div><label for="acc">Serial</label><input id="acc"></div>
       <button onclick="search()">Search</button>
       <button style="background:#28a745;" onclick="forceRefresh()">Force Refresh DB</button>
   </div>
 
   <div id="card1" class="card">
       <h2>Energy Data</h2>
-      <div><label for="peak">Peak</label><input id="peak"></div>
-      <div><label for="offpeak">Off-Peak</label><input id="offpeak"></div>
-      <div><label for="kvarp">KVAR Peak</label><input id="kvarp"></div>
-      <div><label for="kvaro">KVAR Off-Peak</label><input id="kvaro"></div>
-      <div><label for="cmd">CMD</label><input id="cmd"></div>
+      <div><label>Peak</label><input id="peak"></div>
+      <div><label>Off-Peak</label><input id="offpeak"></div>
+      <div><label>KVAR Peak</label><input id="kvarp"></div>
+      <div><label>KVAR Off-Peak</label><input id="kvaro"></div>
+      <div><label>CMD</label><input id="cmd"></div>
       <button onclick="updateEnergy()">Update</button>
+      <div id="status1" class="status"></div>
   </div>
 
   <div id="card2" class="card">
       <h2>Electrical Data</h2>
-      <div><label for="v1">V1</label><input id="v1"></div>
-      <div><label for="v2">V2</label><input id="v2"></div>
-      <div><label for="v3">V3</label><input id="v3"></div>
-      <div><label for="i1">I1</label><input id="i1"></div>
-      <div><label for="i2">I2</label><input id="i2"></div>
-      <div><label for="i3">I3</label><input id="i3"></div>
-      <div><label for="av1">Angle V1</label><input id="av1"></div>
-      <div><label for="av2">Angle V2</label><input id="av2"></div>
-      <div><label for="av3">Angle V3</label><input id="av3"></div>
-      <div><label for="ai1">Angle I1</label><input id="ai1"></div>
-      <div><label for="ai2">Angle I2</label><input id="ai2"></div>
-      <div><label for="ai3">Angle I3</label><input id="ai3"></div>
+      <div><label>V1</label><input id="v1"></div>
+      <div><label>V2</label><input id="v2"></div>
+      <div><label>V3</label><input id="v3"></div>
+      <div><label>I1</label><input id="i1"></div>
+      <div><label>I2</label><input id="i2"></div>
+      <div><label>I3</label><input id="i3"></div>
+      <div><label>Angle V1</label><input id="av1"></div>
+      <div><label>Angle V2</label><input id="av2"></div>
+      <div><label>Angle V3</label><input id="av3"></div>
+      <div><label>Angle I1</label><input id="ai1"></div>
+      <div><label>Angle I2</label><input id="ai2"></div>
+      <div><label>Angle I3</label><input id="ai3"></div>
       <button onclick="updateElectrical()">Update</button>
+      <div id="status2" class="status"></div>
   </div>
 
 </div>
 
 <script>
-const API = "https://script.google.com/macros/s/AKfycbz0WX0_4YyFjrOOcoqqbQzRLS0ubLo0vwEmb_0Yb6rk_s0m-pIOtTMG3WI0fai2J5m8/exec"; // replace with your deployed Apps Script URL
+const API = "https://script.google.com/macros/s/AKfycbz0WX0_4YyFjrOOcoqqbQzRLS0ubLo0vwEmb_0Yb6rk_s0m-pIOtTMG3WI0fai2J5m8/exec";
+
 let database = {};
 let row = "";
+let pendingUpdates = JSON.parse(localStorage.getItem("pendingUpdates") || "[]");
 
 
-function loadDatabase(force=false){
-    const now = Date.now();
-    const cached = localStorage.getItem("meterDatabase");
 
-    if(!force && cached){
-        try{
-            const dataObj = JSON.parse(cached);
-            if(now - dataObj.timestamp < 24*60*60*1000){
-                database = dataObj.data;
-                console.log("Database loaded from cache");
-                return Promise.resolve();
-            }
-        }catch(e){ console.warn("Failed to parse cached DB"); }
-    }
-
+function loadDatabase(){
     return fetch(API+"?all=1")
-        .then(r=>r.json())
-        .then(arr=>{
-            database = {};
-            arr.forEach(d=>{
-                if(d.Serial!==undefined) database[String(d.Serial).trim()] = d;
-            });
-            localStorage.setItem("meterDatabase", JSON.stringify({data: database, timestamp: now}));
-            console.log("Database loaded from API");
-        })
-        .catch(err=>{
-            console.error("Failed to load database:", err);
-            alert("Error loading database. Check API or internet.");
+    .then(r=>r.json())
+    .then(arr=>{
+        database = {};
+        arr.forEach(d=>{
+            database[String(d.Serial).trim()] = d;
         });
-}
-
-
-function fillData(d){
-    if(!d) return;
-    row = d.row || "";
-    const mapping = {
-        peak: "Peak",
-        offpeak: "Off-peak",
-        kvarp: "Kvar",
-        kvaro: "OpkKvar",
-        cmd: "CMD",
-        v1: "V1",
-        v2: "V2",
-        v3: "V3",
-        i1: "I1",
-        i2: "I2",
-        i3: "I3",
-        av1: "<V1",
-        av2: "<V2",
-        av3: "<V3",
-        ai1: "<I1",
-        ai2: "<I2",
-        ai3: "<I3"
-    };
-    Object.keys(mapping).forEach(id=>{
-        if(d[mapping[id]]!==undefined) document.getElementById(id).value = d[mapping[id]];
     });
 }
 
 
+
+function fillData(d){
+    row = d.row || "";
+
+    peak.value=d.Peak||"";
+    offpeak.value=d["Off-peak"]||"";
+    kvarp.value=d.Kvar||"";
+    kvaro.value=d.OpkKvar||"";
+    cmd.value=d.CMD||"";
+
+    v1.value=d.V1||"";
+    v2.value=d.V2||"";
+    v3.value=d.V3||"";
+
+    i1.value=d.I1||"";
+    i2.value=d.I2||"";
+    i3.value=d.I3||"";
+
+    av1.value=d["<V1"]||"";
+    av2.value=d["<V2"]||"";
+    av3.value=d["<V3"]||"";
+
+    ai1.value=d["<I1"]||"";
+    ai2.value=d["<I2"]||"";
+    ai3.value=d["<I3"]||"";
+}
+
 function search(){
-    const id = document.getElementById("acc").value.trim();
+    const id = acc.value.trim();
     if(database[id]) fillData(database[id]);
-    else alert("Serial not found!");
+}
+
+function forceRefresh(){ loadDatabase(); }
+
+
+
+function collectData(){
+    return {
+        row,
+        peak:peak.value, offpeak:offpeak.value,
+        kvarp:kvarp.value, kvaro:kvaro.value, cmd:cmd.value,
+        v1:v1.value, v2:v2.value, v3:v3.value,
+        i1:i1.value, i2:i2.value, i3:i3.value,
+        av1:av1.value, av2:av2.value, av3:av3.value,
+        ai1:ai1.value, ai2:ai2.value, ai3:ai3.value,
+        updatedAt: Date.now(),
+        status:"pending"
+    };
+}
+
+function saveQueue(){
+    localStorage.setItem("pendingUpdates", JSON.stringify(pendingUpdates));
 }
 
 
-function forceRefresh(){
-    loadDatabase(true).then(()=>alert("Database refreshed successfully!"));
+
+async function sendData(item){
+    try{
+        const res = await fetch(API,{
+            method:"POST",
+            body: JSON.stringify(item)
+        });
+
+        
+        let json;
+        try{
+            json = await res.json();
+        }catch(e){
+            json = {status:"updated"};
+        }
+
+        
+        if(
+            json.status === "updated" ||
+            json.status === "ignored" ||
+            json.result === "success" ||
+            res.ok
+        ){
+            return true;
+        }
+
+        return false;
+
+    }catch(err){
+        return false;
+    }
 }
 
 
-function updateEnergy(){
-    fetch(API,{method:"POST",body:JSON.stringify({
-        row,row,
-        peak:peak.value,offpeak:offpeak.value,kvarp:kvarp.value,kvaro:kvaro.value,cmd:cmd.value,
-        v1:v1.value,v2:v2.value,v3:v3.value,
-        i1:i1.value,i2:i2.value,i3:i3.value,
-        av1:av1.value,av2:av2.value,av3:av3.value,
-        ai1:ai1.value,ai2:ai2.value,ai3:ai3.value
-    })});
-    const card=document.getElementById("card1"); card.classList.add("updated");
+
+async function syncPending(){
+    if(!navigator.onLine || pendingUpdates.length===0) return;
+
+    let newQueue = [];
+
+    for(let item of pendingUpdates){
+        let ok = await sendData(item);
+
+        if(!ok){
+            newQueue.push(item); 
+        }
+    }
+
+   
+    pendingUpdates = newQueue;
+
+    saveQueue();
+    updateStatusUI();
+}
+
+
+// ================= MAIN =================
+function sendOrQueue(data, cardId){
+    pendingUpdates.push(data);
+    saveQueue();
+    updateStatusUI();
+
+    if(navigator.onLine){
+        setTimeout(syncPending, 500);
+    }
+
+    updateCard(cardId);
+}
+
+function updateEnergy(){ sendOrQueue(collectData(),"card1"); }
+function updateElectrical(){ sendOrQueue(collectData(),"card2"); }
+
+
+
+function updateCard(id){
+    const card=document.getElementById(id);
+    card.classList.add("updated");
     setTimeout(()=>card.classList.remove("updated"),1000);
 }
 
+function updateStatusUI(){
+    const text = pendingUpdates.length>0
+        ? "🟡 Pending ("+pendingUpdates.length+")"
+        : "🟢 Synced";
 
-function updateElectrical(){
-    fetch(API,{method:"POST",body:JSON.stringify({
-        row,row,
-        peak:peak.value,offpeak:offpeak.value,kvarp:kvarp.value,kvaro:kvaro.value,cmd:cmd.value,
-        v1:v1.value,v2:v2.value,v3:v3.value,
-        i1:i1.value,i2:i2.value,i3:i3.value,
-        av1:av1.value,av2:av2.value,av3:av3.value,
-        ai1:ai1.value,ai2:ai2.value,ai3:ai3.value
-    })});
-    const card=document.getElementById("card2"); card.classList.add("updated");
-    setTimeout(()=>card.classList.remove("updated"),1000);
+    status1.innerText = text;
+    status2.innerText = text;
 }
 
 
-loadDatabase();
+window.addEventListener("online", syncPending);
+setInterval(syncPending, 500);
+
+
+loadDatabase().then(()=>{
+    syncPending(); 
+    updateStatusUI();
+});
 </script>
 
 </body>
