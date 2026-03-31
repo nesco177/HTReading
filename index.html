@@ -70,7 +70,11 @@ let pendingUpdates = JSON.parse(localStorage.getItem("pendingUpdates") || "[]");
 
 
 
-function loadDatabase(){
+function loadDatabase(force=false){
+    if(!force && Object.keys(database).length > 0){
+        return Promise.resolve();
+    }
+
     return fetch(API+"?all=1")
     .then(r=>r.json())
     .then(arr=>{
@@ -111,11 +115,28 @@ function fillData(d){
 
 function search(){
     const id = acc.value.trim();
-    if(database[id]) fillData(database[id]);
+
+    if(!id){
+        alert("Please enter serial number");
+        return;
+    }
+
+    if(database[id]){
+        fillData(database[id]);
+    } else {
+        alert("❌ Number not found");
+    }
 }
 
-function forceRefresh(){ loadDatabase(); }
-
+function forceRefresh(){
+    loadDatabase(true)
+    .then(()=>{
+        alert("✅ Database refreshed successfully");
+    })
+    .catch(()=>{
+        alert("❌ Failed to refresh database");
+    });
+}
 
 
 function collectData(){
@@ -145,15 +166,15 @@ async function sendData(item){
             body: JSON.stringify(item)
         });
 
-        
+       
         let json;
         try{
             json = await res.json();
         }catch(e){
-            json = {status:"updated"};
+            json = {status:"updated"}; 
         }
 
-        
+      
         if(
             json.status === "updated" ||
             json.status === "ignored" ||
@@ -185,7 +206,7 @@ async function syncPending(){
         }
     }
 
-   
+    
     pendingUpdates = newQueue;
 
     saveQueue();
@@ -193,7 +214,7 @@ async function syncPending(){
 }
 
 
-// ================= MAIN =================
+
 function sendOrQueue(data, cardId){
     pendingUpdates.push(data);
     saveQueue();
@@ -210,7 +231,7 @@ function updateEnergy(){ sendOrQueue(collectData(),"card1"); }
 function updateElectrical(){ sendOrQueue(collectData(),"card2"); }
 
 
-
+// ================= UI =================
 function updateCard(id){
     const card=document.getElementById(id);
     card.classList.add("updated");
@@ -227,8 +248,10 @@ function updateStatusUI(){
 }
 
 
+
 window.addEventListener("online", syncPending);
 setInterval(syncPending, 500);
+
 
 
 loadDatabase().then(()=>{
