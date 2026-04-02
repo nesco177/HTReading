@@ -68,8 +68,6 @@ let database = {};
 let row = "";
 let pendingUpdates = JSON.parse(localStorage.getItem("pendingUpdates") || "[]");
 
-
-
 function loadDatabase(force=false){
     if(!force && Object.keys(database).length > 0){
         return Promise.resolve();
@@ -84,8 +82,6 @@ function loadDatabase(force=false){
         });
     });
 }
-
-
 
 function fillData(d){
     row = d.row || "";
@@ -138,7 +134,6 @@ function forceRefresh(){
     });
 }
 
-
 function collectData(){
     return {
         row,
@@ -157,8 +152,6 @@ function saveQueue(){
     localStorage.setItem("pendingUpdates", JSON.stringify(pendingUpdates));
 }
 
-
-
 async function sendData(item){
     try{
         const res = await fetch(API,{
@@ -166,7 +159,6 @@ async function sendData(item){
             body: JSON.stringify(item)
         });
 
-       
         let json;
         try{
             json = await res.json();
@@ -174,7 +166,6 @@ async function sendData(item){
             json = {status:"updated"}; 
         }
 
-      
         if(
             json.status === "updated" ||
             json.status === "ignored" ||
@@ -191,8 +182,6 @@ async function sendData(item){
     }
 }
 
-
-
 async function syncPending(){
     if(!navigator.onLine || pendingUpdates.length===0) return;
 
@@ -206,14 +195,10 @@ async function syncPending(){
         }
     }
 
-    
     pendingUpdates = newQueue;
-
     saveQueue();
     updateStatusUI();
 }
-
-
 
 function sendOrQueue(data, cardId){
     pendingUpdates.push(data);
@@ -230,8 +215,7 @@ function sendOrQueue(data, cardId){
 function updateEnergy(){ sendOrQueue(collectData(),"card1"); }
 function updateElectrical(){ sendOrQueue(collectData(),"card2"); }
 
-
-// ================= UI =================
+// UI
 function updateCard(id){
     const card=document.getElementById(id);
     card.classList.add("updated");
@@ -247,16 +231,16 @@ function updateStatusUI(){
     status2.innerText = text;
 }
 
-
-
 window.addEventListener("online", syncPending);
 setInterval(syncPending, 500);
-
-
 
 loadDatabase().then(()=>{
     syncPending(); 
     updateStatusUI();
+});
+
+document.querySelectorAll("input").forEach(i=>{
+    i.setAttribute("inputmode", "decimal");
 });
 </script>
 
