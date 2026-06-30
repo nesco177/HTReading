@@ -24,14 +24,14 @@ button:hover { background:#125aa0; }
 <div class="container">
 
   <div class="card">
-      <h2>Search Account</h2>
+      <h2 id="searchTitle">Search Account</h2>
       <div><label for="acc">Serial</label><input id="acc"></div>
       <button onclick="search()">Search</button>
       <button style="background:#28a745;" onclick="openExcel()">Updated Excel</button>
   </div>
 
   <div id="card1" class="card">
-      <h2>Energy Data</h2>
+      <h2 id="title1">Energy Data</h2>
       <div><label>Peak</label><input id="peak"></div>
       <div><label>Off-Peak</label><input id="offpeak"></div>
       <div><label>KVAR Peak</label><input id="kvarp"></div>
@@ -42,7 +42,7 @@ button:hover { background:#125aa0; }
   </div>
 
   <div id="card2" class="card">
-      <h2>Electrical Data</h2>
+      <h2 id="title2">Electrical Data</h2>
       <div><label>V1</label><input id="v1"></div>
       <div><label>V2</label><input id="v2"></div>
       <div><label>V3</label><input id="v3"></div>
@@ -85,6 +85,7 @@ function loadDatabase(force=false){
 
 function fillData(d){
     row = d.row || "";
+    if(d.updated){searchTitle.innerHTML="Search Account ✅";}else{searchTitle.innerHTML="Search Account";}
 
     peak.value=d.Peak||"";
     offpeak.value=d["Off-peak"]||"";
@@ -125,10 +126,7 @@ function search(){
 }
 
 function openExcel(){
-    window.open(
-        "https://docs.google.com/spreadsheets/d/1d9Xmbdju7pTjJeNIv8WIXvVq_LcpRXoRFAPkPMQVzVM/edit?usp=drivesdk",
-        "_blank"
-    );
+    window.open("https://docs.google.com/spreadsheets/d/1d9Xmbdju7pTjJeNIv8WIXvVq_LcpRXoRFAPkPMQVzVM/edit?usp=drivesdk","_blank");
 }
 
 function collectData(){
