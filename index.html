@@ -27,7 +27,7 @@ button:hover { background:#125aa0; }
       <h2>Search Account</h2>
       <div><label for="acc">Serial</label><input id="acc"></div>
       <button onclick="search()">Search</button>
-      <button style="background:#28a745;" onclick="forceRefresh()">Force Refresh DB</button>
+      <button style="background:#28a745;" onclick="openExcel()">Updated Excel</button>
   </div>
 
   <div id="card1" class="card">
@@ -124,14 +124,11 @@ function search(){
     }
 }
 
-function forceRefresh(){
-    loadDatabase(true)
-    .then(()=>{
-        alert("✅ Database refreshed successfully");
-    })
-    .catch(()=>{
-        alert("❌ Failed to refresh database");
-    });
+function openExcel(){
+    window.open(
+        "https://docs.google.com/spreadsheets/d/1d9Xmbdju7pTjJeNIv8WIXvVq_LcpRXoRFAPkPMQVzVM/edit?usp=drivesdk",
+        "_blank"
+    );
 }
 
 function collectData(){
